@@ -3,8 +3,8 @@ package main
 import (
 	"net/http"
 
-	"example.com/models"
 	"example.com/db"
+	"example.com/models"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,7 +19,11 @@ func main() {
 }
 
 func getEvents(context *gin.Context) {
-	events := models.GetAllEvents()
+	events, err := models.GetAllEvents()
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{"message": "Error, tray again later"})
+		return
+	}
 	context.JSON(http.StatusOK, events)
 }
 
@@ -33,6 +37,10 @@ func createEvent(context *gin.Context) {
 
 	event.ID = 1
 	event.UserID = 1
-	event.Save()
+	err = event.Save()
+	if err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{"message": "Error, try again later"})
+		return
+	}
 	context.JSON(http.StatusCreated, gin.H{"messasge": "Event created", "event": event})
 }
