@@ -1,0 +1,25 @@
+meta {
+  name: New HTTP Request
+  type: http
+  seq: 1
+}
+
+post {
+  url: {
+"name": "Primer evento",
+"description": "Descripcion del primer evento",
+"location": "Mi casa",
+"date_time": "2025-01-01T12:30:00.000Z"
+http://localhost:8080/events
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "name": "Primer evento",
+    "description": "Descripcion del primer evento",
+    "location": "Mi casa",
+    "date_time": "2025-01-01T12:30:00.000Z"
+  }
+}
