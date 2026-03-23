@@ -1,11 +1,16 @@
 package models
 
-import "example.com/db"
+import (
+	"errors"
+
+	"example.com/db"
+	"example.com/utils"
+)
 
 type User struct {
 	ID       int64
 	Email    string `binding:"required" json:"email"`
-	Password string `binding:"required" json:"password"`
+	Password string `binding:"required"`
 }
 
 func (u *User) Save() error {
@@ -15,13 +20,34 @@ func (u *User) Save() error {
 		return err
 	}
 	defer stmt.Close()
-	r, err := stmt.Exec(u.Email, u.Password)
+	hashedPassword, err := utils.HashPassword(u.Password)
+	if err != nil {
+		return err
+	}
+	r, err := stmt.Exec(u.Email, hashedPassword)
 	if err != nil {
 		return err
 	}
 	u.ID, err = r.LastInsertId()
 	if err != nil {
 		return err
+	}
+	return nil
+}
+
+func (u *User) ValidateCredentials() error {
+	query := `SELECT id, password FROM users WHERE email = ?`
+	row := db.DB.QueryRow(query, u.Email)
+
+	var retrievedPassword string
+	err := row.Scan(&u.ID, &retrievedPassword)
+	if err != nil {
+		return errors.New("Invalid credentials")
+	}
+
+	passwordIsValid := utils.CheckPasswordHash(u.Password, retrievedPassword)
+	if !passwordIsValid {
+		return errors.New("Invalid credentials")
 	}
 	return nil
 }
