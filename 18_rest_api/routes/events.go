@@ -3,10 +3,8 @@ package routes
 import (
 	"net/http"
 	"strconv"
-	"strings"
 
 	"example.com/models"
-	"example.com/utils"
 	"github.com/gin-gonic/gin"
 )
 
@@ -34,31 +32,13 @@ func getEvents(context *gin.Context) {
 }
 
 func createEvent(context *gin.Context) {
-	authHeader := context.Request.Header.Get("Authorization")
-
-	if authHeader == "" {
-		context.JSON(http.StatusUnauthorized, gin.H{"message": "Unauthorized"})
-		return
-	}
-
-	// Extract token from "Bearer <token>" format
-	token := strings.TrimPrefix(authHeader, "Bearer ")
-	if token == authHeader { // "Bearer " prefix not found, use token as is
-		token = authHeader
-	}
-
-	userId, err := utils.VerifyToken(token)
-	if err != nil {
-		context.JSON(http.StatusUnauthorized, gin.H{"message": "Unauthorized"})
-		return
-	}
 	var event models.Event
-	err = context.ShouldBindJSON(&event)
+	err := context.ShouldBindJSON(&event)
 	if err != nil {
 		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
+	userId := context.GetInt64("userId")
 	event.UserID = userId
 	err = event.Save()
 	if err != nil {
