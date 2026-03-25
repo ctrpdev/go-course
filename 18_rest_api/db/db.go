@@ -49,4 +49,30 @@ func createTables() {
 	if err != nil {
 		panic(err)
 	}
+
+	createRegistrationsTable := `
+	CREATE TABLE IF NOT EXISTS registrations (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		event_id INTEGER,
+		user_id INTEGER,
+		FOREIGN KEY (event_id) REFERENCES events(id),
+		FOREIGN KEY (user_id) REFERENCES users(id)
+	)`
+
+	_, err = DB.Exec(createRegistrationsTable)
+	if err != nil {
+		panic(err)
+	}
+
+	createBlacklistTable := `
+	CREATE TABLE IF NOT EXISTS token_blacklist (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		token TEXT NOT NULL UNIQUE,
+		revoked_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`
+
+	_, err = DB.Exec(createBlacklistTable)
+	if err != nil {
+		panic(err)
+	}
 }
