@@ -19,7 +19,10 @@
 16. [Recursión](#recursión)
 17. [Interfaces](#interfaces)
 18. [Generics](#generics)
-19. [Recursos Útiles](#recursos-útiles)
+19. [Concurrencia (Goroutines)](#concurrencia-goroutines)
+20. [REST API con Gin](#rest-api-con-gin)
+21. [Bases de Datos con `database/sql`](#bases-de-datos-con-databasesql)
+22. [Recursos Útiles](#recursos-útiles)
 
 ---
 
@@ -1486,6 +1489,159 @@ os.WriteFile("note.json", data, 0644)
 // Deserializar desde JSON
 var note Note
 json.Unmarshal(data, &note)
+```
+
+---
+
+## Concurrencia (Goroutines)
+
+Go tiene soporte nativo para concurrencia a través de **goroutines** y **channels**.
+
+### Goroutines
+Una goroutine es una función ejecutada de forma concurrente. Se inicia con la palabra clave `go`.
+
+```go
+func printMessages() {
+    for i := 0; i < 5; i++ {
+        fmt.Println("Message", i)
+    }
+}
+
+func main() {
+    go printMessages() // Se ejecuta de forma asíncrona en otra goroutine
+    fmt.Println("Main execution")
+    time.Sleep(1 * time.Second) // Evita que main termine antes que la goroutine
+}
+```
+
+---
+
+## REST API con Gin
+
+Gin es uno de los frameworks web más populares de Go debido a su alto rendimiento.
+
+### Servidor Básico y Rutas
+
+```go
+package main
+
+import "github.com/gin-gonic/gin"
+
+func main() {
+    server := gin.Default()
+
+    // Endpoint GET
+    server.GET("/events", getEvents)
+    
+    // Parámetros de ruta
+    server.GET("/events/:id", getEvent)
+
+    server.Run(":8080") // Iniciar el servidor en localhost:8080
+}
+
+func getEvents(ctx *gin.Context) {
+    ctx.JSON(200, gin.H{"message": "Lista de eventos"})
+}
+```
+
+### Grupos de Rutas y Middlewares
+
+Los middlewares permiten ejecutar código antes de llegar a los handlers.
+
+```go
+func Authenticate(ctx *gin.Context) {
+    token := ctx.Request.Header.Get("Authorization")
+    if token == "" {
+        ctx.AbortWithStatusJSON(401, gin.H{"message": "No autorizado"})
+        return
+    }
+    ctx.Next()
+}
+
+func RegisterRoutes(server *gin.Engine) {
+    // Grupo protegido por middleware
+    authenticated := server.Group("/")
+    authenticated.Use(Authenticate)
+
+    authenticated.POST("/events", createEvent)
+    authenticated.PUT("/events/:id", updateEvent)
+}
+```
+
+### Leer Datos (Bind JSON)
+
+Para recibir JSON en peticiones POST/PUT:
+
+```go
+type Event struct {
+    Name string `json:"name" binding:"required"`
+}
+
+func createEvent(ctx *gin.Context) {
+    var event Event
+    // BindJSON extrae el body http y lo mapea al Struct
+    if err := ctx.BindJSON(&event); err != nil {
+        ctx.JSON(400, gin.H{"message": "Datos inválidos"})
+        return
+    }
+    // ...
+}
+```
+
+---
+
+## Bases de Datos con `database/sql`
+
+Go soporta múltiples bases de datos con un paquete estándar `database/sql`, usado en combinación con un driver (ej: SQLite, PostgreSQL).
+
+### Configuración y Conexión SQLite
+
+```go
+package db
+
+import (
+    "database/sql"
+    _ "modernc.org/sqlite" // El underscore indica que importamos pero no usamos variables, solo inicializamos el driver
+)
+
+var DB *sql.DB
+
+func InitDB() {
+    var err error
+    DB, err = sql.Open("sqlite", "api.db")
+    if err != nil {
+        panic(err)
+    }
+}
+```
+
+### Queries y Executions
+
+**`Exec`**: Para operaciones que no retornan filas (INSERT, UPDATE, DELETE, CREATE TABLE).
+
+```go
+query := `CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL UNIQUE
+)`
+_, err := DB.Exec(query)
+```
+
+**`Query` / `QueryRow`**: Para leer datos (SELECT).
+
+```go
+func GetEventByID(id int64) (*Event, error) {
+    query := "SELECT id, name FROM events WHERE id = ?"
+    row := DB.QueryRow(query, id)
+
+    var event Event
+    // Scan copia los valores devueltos en la fila a las variables
+    err := row.Scan(&event.ID, &event.Name) 
+    if err != nil {
+        return nil, err
+    }
+    return &event, nil
+}
 ```
 
 ---
